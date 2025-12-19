@@ -17,6 +17,7 @@ export interface SelectedName {
   selectedAt: number
   prizeId?: string
   prizeName?: string
+  isAbsent?: boolean
 }
 
 export interface Prize {

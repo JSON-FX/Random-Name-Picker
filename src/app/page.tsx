@@ -18,7 +18,7 @@ const DURATION_OPTIONS = [
 const ALL_CATEGORIES_ID = '__all__'
 
 export default function ControlPage() {
-  const { categories, names, getNamesByCategory, getCategoryById, selectName, prizes, getAvailablePrizes } =
+  const { categories, names, getNamesByCategory, getCategoryById, selectName, markLastWinnerAbsent, prizes, getAvailablePrizes } =
     useApp()
   const [selectedCategoryId, setSelectedCategoryId] =
     useState<string>(ALL_CATEGORIES_ID)
@@ -28,6 +28,7 @@ export default function ControlPage() {
   const [selectedPrize, setSelectedPrize] = useState<Prize | null>(null)
   const [lastPrize, setLastPrize] = useState<Prize | null>(null)
   const [prizeSearch, setPrizeSearch] = useState('')
+  const [lastWinnerMarkedAbsent, setLastWinnerMarkedAbsent] = useState(false)
   const predeterminedWinnerRef = useRef<Name | null>(null)
   const availablePrizes = getAvailablePrizes()
 
@@ -147,6 +148,7 @@ export default function ControlPage() {
     setIsPicking(true)
     setLastWinner(null)
     setLastPrize(null)
+    setLastWinnerMarkedAbsent(false)
     predeterminedWinnerRef.current = null
     triggerPick()
   }
@@ -264,6 +266,65 @@ export default function ControlPage() {
             </div>
           ) : (
             <>
+              {/* Category Selector - moved here for easy access */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-8 w-full max-w-2xl">
+                <h3 className="text-gray-800 font-medium mb-3">Select Category</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {/* All Categories (Major Prize) Toggle */}
+                  <button
+                    onClick={() => setSelectedCategoryId(ALL_CATEGORIES_ID)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                      isAllCategories
+                        ? 'bg-blue-500 text-white ring-2 ring-blue-300'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <span>🏆</span>
+                    <span>All Categories</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        isAllCategories ? 'bg-white/20' : 'bg-blue-200'
+                      }`}
+                    >
+                      {totalNamesCount}
+                    </span>
+                  </button>
+
+                  {/* Individual Categories */}
+                  {categories.map((category) => {
+                    const count = getNamesByCategory(category.id).length
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedCategoryId(category.id)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                          selectedCategoryId === category.id
+                            ? 'text-white ring-2 ring-offset-2'
+                            : 'text-gray-700 hover:opacity-80'
+                        }`}
+                        style={{
+                          backgroundColor:
+                            selectedCategoryId === category.id
+                              ? category.color
+                              : `${category.color}30`,
+                        }}
+                      >
+                        <span>{category.name}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            selectedCategoryId === category.id
+                              ? 'bg-white/20'
+                              : 'bg-black/10'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Last Winner Display */}
               {lastWinner && (
                 <div className="mb-8 text-center">
@@ -335,6 +396,26 @@ export default function ControlPage() {
                   '🎲 Pick a Name!'
                 )}
               </button>
+
+              {/* Mark as Absent Button - appears after winner is selected */}
+              {lastWinner && !isPicking && !lastWinnerMarkedAbsent && (
+                <button
+                  onClick={() => {
+                    markLastWinnerAbsent()
+                    setLastWinnerMarkedAbsent(true)
+                  }}
+                  className="mt-4 px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-full hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl"
+                >
+                  Mark as Absent
+                </button>
+              )}
+
+              {/* Absent confirmation message */}
+              {lastWinnerMarkedAbsent && lastWinner && (
+                <div className="mt-4 px-6 py-3 bg-orange-100 border border-orange-300 rounded-lg text-orange-700 font-medium">
+                  {lastWinner.name} marked as absent - prize restored
+                </div>
+              )}
 
               {/* Names count */}
               <p className="mt-6 text-gray-500 text-lg">
@@ -553,64 +634,6 @@ export default function ControlPage() {
               </div>
             </div>
 
-            {/* Category Toggle */}
-            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-              <h3 className="text-gray-800 font-medium mb-3">Select Category</h3>
-              <div className="flex gap-2 flex-wrap">
-                {/* All Categories (Major Prize) Toggle */}
-                <button
-                  onClick={() => setSelectedCategoryId(ALL_CATEGORIES_ID)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                    isAllCategories
-                      ? 'bg-blue-500 text-white ring-2 ring-blue-300'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                  }`}
-                >
-                  <span>🏆</span>
-                  <span>All Categories</span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      isAllCategories ? 'bg-white/20' : 'bg-blue-200'
-                    }`}
-                  >
-                    {totalNamesCount}
-                  </span>
-                </button>
-
-                {/* Individual Categories */}
-                {categories.map((category) => {
-                  const count = getNamesByCategory(category.id).length
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategoryId(category.id)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                        selectedCategoryId === category.id
-                          ? 'text-white ring-2 ring-offset-2'
-                          : 'text-gray-700 hover:opacity-80'
-                      }`}
-                      style={{
-                        backgroundColor:
-                          selectedCategoryId === category.id
-                            ? category.color
-                            : `${category.color}30`,
-                      }}
-                    >
-                      <span>{category.name}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          selectedCategoryId === category.id
-                            ? 'bg-white/20'
-                            : 'bg-black/10'
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
           </div>
         )}
       </div>

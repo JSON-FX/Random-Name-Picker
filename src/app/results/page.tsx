@@ -33,24 +33,26 @@ export default function ResultsPage() {
       return (
         w.name.toLowerCase().includes(search) ||
         (w.prizeName && w.prizeName.toLowerCase().includes(search)) ||
-        (category?.name && category.name.toLowerCase().includes(search))
+        (category?.name && category.name.toLowerCase().includes(search)) ||
+        (w.isAbsent && 'absent'.includes(search))
       )
     })
   }, [filteredResults, winnersSearch, getCategoryById])
 
   const exportCSV = () => {
-    const rows: string[] = ['Name,Category,Prize']
+    const rows: string[] = ['Name,Category,Prize,Status']
 
     filteredResults.forEach((selected) => {
       const category = getCategoryById(selected.categoryId)
       const categoryName = category?.name || 'Unknown'
       const prizeName = selected.prizeName || ''
+      const status = selected.isAbsent ? 'Absent' : 'Present'
       // Escape quotes in names and wrap in quotes if contains comma
       const escapeName = (str: string) =>
         str.includes(',') || str.includes('"')
           ? `"${str.replace(/"/g, '""')}"`
           : str
-      rows.push(`${escapeName(selected.name)},${escapeName(categoryName)},${escapeName(prizeName)}`)
+      rows.push(`${escapeName(selected.name)},${escapeName(categoryName)},${escapeName(prizeName)},${status}`)
     })
 
     const csvContent = rows.join('\n')
@@ -311,16 +313,19 @@ export default function ResultsPage() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Winner Name</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Category</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prize</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredWinnersList.map((winner, index) => {
                       const category = getCategoryById(winner.categoryId)
                       return (
-                        <tr key={winner.id} className="hover:bg-gray-50">
+                        <tr key={winner.id} className={`hover:bg-gray-50 ${winner.isAbsent ? 'bg-orange-50' : ''}`}>
                           <td className="px-4 py-3 text-gray-500 text-sm">{index + 1}</td>
                           <td className="px-4 py-3">
-                            <span className="font-medium text-gray-800">{winner.name}</span>
+                            <span className={`font-medium ${winner.isAbsent ? 'text-gray-500' : 'text-gray-800'}`}>
+                              {winner.name}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             {category && (
@@ -340,6 +345,17 @@ export default function ResultsPage() {
                               </span>
                             ) : (
                               <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {winner.isAbsent ? (
+                              <span className="inline-flex items-center gap-1 text-sm text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
+                                Absent
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-sm text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                                Present
+                              </span>
                             )}
                           </td>
                         </tr>

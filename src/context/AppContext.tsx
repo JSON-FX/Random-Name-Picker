@@ -21,7 +21,8 @@ interface AppContextType extends AppState {
   updateCategory: (id: string, name: string, color: string) => void
   addName: (name: string, categoryId: string) => void
   removeName: (id: string) => void
-  selectName: (id: string, prize?: Prize) => void
+  selectName: (id: string, prize?: Prize, isAbsent?: boolean) => void
+  markLastWinnerAbsent: () => void
   restoreName: (selectedId: string) => void
   getNamesByCategory: (categoryId: string) => Name[]
   getSelectedByCategory: (categoryId: string) => SelectedName[]
@@ -126,7 +127,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
-  const selectName = (id: string, prize?: Prize) => {
+  const selectName = (id: string, prize?: Prize, isAbsent?: boolean) => {
     const nameToSelect = state.names.find((n) => n.id === id)
     if (!nameToSelect) return
 
@@ -135,18 +136,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: nameToSelect.name,
       categoryId: nameToSelect.categoryId,
       selectedAt: Date.now(),
-      prizeId: prize?.id,
-      prizeName: prize?.name,
+      prizeId: isAbsent ? undefined : prize?.id,
+      prizeName: isAbsent ? undefined : prize?.name,
+      isAbsent: isAbsent || false,
     }
 
     setState((prev) => ({
       ...prev,
       names: prev.names.filter((n) => n.id !== id),
       selectedNames: [...prev.selectedNames, selected],
-      // Deduct prize quantity if a prize was selected
-      prizes: prize
+      // Deduct prize quantity only if a prize was selected AND winner is NOT absent
+      prizes: prize && !isAbsent
         ? prev.prizes.map((p) =>
             p.id === prize.id ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p
+          )
+        : prev.prizes,
+    }))
+  }
+
+  // Mark the most recent winner as absent (restores prize quantity if applicable)
+  const markLastWinnerAbsent = () => {
+    const lastWinner = state.selectedNames[state.selectedNames.length - 1]
+    if (!lastWinner || lastWinner.isAbsent) return
+
+    setState((prev) => ({
+      ...prev,
+      selectedNames: prev.selectedNames.map((s, idx) =>
+        idx === prev.selectedNames.length - 1
+          ? { ...s, isAbsent: true, prizeId: undefined, prizeName: undefined }
+          : s
+      ),
+      // Restore prize quantity since winner is absent
+      prizes: lastWinner.prizeId
+        ? prev.prizes.map((p) =>
+            p.id === lastWinner.prizeId ? { ...p, quantity: p.quantity + 1 } : p
           )
         : prev.prizes,
     }))
@@ -166,8 +189,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       names: [...prev.names, restoredName],
       selectedNames: prev.selectedNames.filter((s) => s.id !== selectedId),
-      // Restore prize quantity if this winner had a prize
-      prizes: selectedName.prizeId
+      // Restore prize quantity if this winner had a prize (and was not absent)
+      prizes: selectedName.prizeId && !selectedName.isAbsent
         ? prev.prizes.map((p) =>
             p.id === selectedName.prizeId ? { ...p, quantity: p.quantity + 1 } : p
           )
@@ -376,6 +399,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addName,
         removeName,
         selectName,
+        markLastWinnerAbsent,
         restoreName,
         getNamesByCategory,
         getSelectedByCategory,
