@@ -20,6 +20,12 @@ export default function ManagePage() {
     getNamesByCategory,
     getSelectedByCategory,
     importFromCSV,
+    importPrizesFromCSV,
+    prizes,
+    addPrize,
+    removePrize,
+    updatePrize,
+    addPrizeStock,
   } = useApp()
 
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -32,6 +38,16 @@ export default function ManagePage() {
     message: string
   } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const prizeFileInputRef = useRef<HTMLInputElement>(null)
+  const [prizeImportResult, setPrizeImportResult] = useState<{
+    success: boolean
+    message: string
+  } | null>(null)
+  const [newPrizeName, setNewPrizeName] = useState('')
+  const [newPrizeQuantity, setNewPrizeQuantity] = useState(1)
+  const [editingPrize, setEditingPrize] = useState<string | null>(null)
+  const [editPrizeName, setEditPrizeName] = useState('')
+  const [editPrizeQuantity, setEditPrizeQuantity] = useState(1)
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,6 +63,62 @@ export default function ManagePage() {
     if (name) {
       addName(name, categoryId)
       setNewNames((prev) => ({ ...prev, [categoryId]: '' }))
+    }
+  }
+
+  const handleAddPrize = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPrizeName.trim() && newPrizeQuantity > 0) {
+      addPrize(newPrizeName.trim(), newPrizeQuantity)
+      setNewPrizeName('')
+      setNewPrizeQuantity(1)
+    }
+  }
+
+  const handleStartEditPrize = (prize: { id: string; name: string; quantity: number }) => {
+    setEditingPrize(prize.id)
+    setEditPrizeName(prize.name)
+    setEditPrizeQuantity(prize.quantity)
+  }
+
+  const handleSaveEditPrize = (id: string) => {
+    if (editPrizeName.trim() && editPrizeQuantity >= 0) {
+      updatePrize(id, editPrizeName.trim(), editPrizeQuantity)
+      setEditingPrize(null)
+    }
+  }
+
+  const handlePrizeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      if (content) {
+        const result = importPrizesFromCSV(content)
+
+        if (result.prizesAdded > 0) {
+          setPrizeImportResult({
+            success: true,
+            message: `Successfully imported ${result.prizesAdded} prize${result.prizesAdded !== 1 ? 's' : ''}.${
+              result.errors.length > 0 ? ` (${result.errors.length} errors)` : ''
+            }`,
+          })
+        } else {
+          setPrizeImportResult({
+            success: false,
+            message: `Import failed. ${result.errors.join(', ')}`,
+          })
+        }
+
+        setTimeout(() => setPrizeImportResult(null), 5000)
+      }
+    }
+    reader.readAsText(file)
+
+    if (prizeFileInputRef.current) {
+      prizeFileInputRef.current.value = ''
     }
   }
 
@@ -174,6 +246,220 @@ export default function ManagePage() {
               Format: Name, Category (one per line)
             </span>
           </div>
+        </div>
+
+        {/* Raffle Prizes */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Raffle Prizes</h2>
+          <p className="text-gray-500 text-sm mb-4">
+            Add prizes with quantities. Select a prize before picking winners.
+          </p>
+
+          {/* Prize Import Result Message */}
+          {prizeImportResult && (
+            <div
+              className={`mb-4 p-4 rounded-xl border ${
+                prizeImportResult.success
+                  ? 'bg-green-50 border-green-200 text-green-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}
+            >
+              {prizeImportResult.message}
+            </div>
+          )}
+
+          {/* Import Prizes from CSV */}
+          <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-gray-800 font-medium">Import from CSV</h3>
+                <p className="text-gray-500 text-sm">
+                  Column A: Prize Name, Column B: Quantity
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={prizeFileInputRef}
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handlePrizeFileUpload}
+                  className="hidden"
+                  id="prize-csv-upload"
+                />
+                <label
+                  htmlFor="prize-csv-upload"
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Upload CSV
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Add Prize Form */}
+          <form onSubmit={handleAddPrize} className="flex gap-4 items-end flex-wrap mb-6">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-gray-500 text-sm mb-2">Prize Name</label>
+              <input
+                type="text"
+                value={newPrizeName}
+                onChange={(e) => setNewPrizeName(e.target.value)}
+                placeholder="e.g., Grand Prize TV"
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-gray-500 text-sm mb-2">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                value={newPrizeQuantity}
+                onChange={(e) => setNewPrizeQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!newPrizeName.trim() || newPrizeQuantity < 1}
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50"
+            >
+              Add Prize
+            </button>
+          </form>
+
+          {/* Prizes List */}
+          {prizes.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">No prizes added yet</p>
+          ) : (
+            <div className="space-y-2">
+              {prizes.map((prize) => {
+                const isDepleted = prize.quantity === 0
+                return (
+                  <div
+                    key={prize.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border group ${
+                      isDepleted
+                        ? 'bg-gray-100 border-gray-300'
+                        : 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200'
+                    }`}
+                  >
+                    {editingPrize === prize.id ? (
+                      <>
+                        <div className="flex gap-3 flex-1">
+                          <input
+                            type="text"
+                            value={editPrizeName}
+                            onChange={(e) => setEditPrizeName(e.target.value)}
+                            className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            value={editPrizeQuantity}
+                            onChange={(e) => setEditPrizeQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-20 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                          />
+                        </div>
+                        <div className="flex gap-2 ml-3">
+                          <button
+                            onClick={() => handleSaveEditPrize(prize.id)}
+                            className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-all"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingPrize(null)}
+                            className="px-3 py-1 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                              isDepleted
+                                ? 'bg-gray-200 text-gray-500'
+                                : 'bg-purple-100 text-purple-600'
+                            }`}
+                          >
+                            {prize.quantity}
+                          </div>
+                          <div>
+                            <span className={`font-medium ${isDepleted ? 'text-gray-500' : 'text-gray-800'}`}>
+                              {prize.name}
+                            </span>
+                            <span className="text-gray-400 text-sm ml-2">
+                              ({prize.initialQuantity - prize.quantity} awarded)
+                            </span>
+                            {isDepleted && (
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                                Depleted
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={`flex gap-2 ${isDepleted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all`}>
+                          <button
+                            onClick={() => addPrizeStock(prize.id, 1)}
+                            className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-all"
+                            title="Add 1 more to stock"
+                          >
+                            +1
+                          </button>
+                          <button
+                            onClick={() => {
+                              const amount = prompt(`Add stock for "${prize.name}"\nEnter quantity to add:`, '5')
+                              if (amount) {
+                                const qty = parseInt(amount, 10)
+                                if (!isNaN(qty) && qty > 0) {
+                                  addPrizeStock(prize.id, qty)
+                                }
+                              }
+                            }}
+                            className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-all"
+                            title="Add custom amount to stock"
+                          >
+                            +N
+                          </button>
+                          <button
+                            onClick={() => handleStartEditPrize(prize)}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-all"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete prize "${prize.name}"?`)) {
+                                removePrize(prize.id)
+                              }
+                            }}
+                            className="px-3 py-1 text-sm bg-red-100 text-red-600 hover:bg-red-200 rounded transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Add Category */}

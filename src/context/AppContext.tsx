@@ -1,12 +1,17 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { AppState, Category, Name, SelectedName } from '@/lib/types'
+import { AppState, Category, Name, SelectedName, Prize } from '@/lib/types'
 import { loadState, saveState, generateId } from '@/lib/storage'
 
 interface ImportResult {
   namesAdded: number
   categoriesCreated: number
+  errors: string[]
+}
+
+interface PrizeImportResult {
+  prizesAdded: number
   errors: string[]
 }
 
@@ -16,13 +21,21 @@ interface AppContextType extends AppState {
   updateCategory: (id: string, name: string, color: string) => void
   addName: (name: string, categoryId: string) => void
   removeName: (id: string) => void
-  selectName: (id: string) => void
+  selectName: (id: string, prize?: Prize) => void
   restoreName: (selectedId: string) => void
   getNamesByCategory: (categoryId: string) => Name[]
   getSelectedByCategory: (categoryId: string) => SelectedName[]
   getCategoryById: (id: string) => Category | undefined
   getCategoryByName: (name: string) => Category | undefined
   importFromCSV: (csvContent: string) => ImportResult
+  importPrizesFromCSV: (csvContent: string) => PrizeImportResult
+  addPrize: (name: string, quantity: number) => void
+  removePrize: (id: string) => void
+  updatePrize: (id: string, name: string, quantity: number) => void
+  addPrizeStock: (id: string, amount: number) => void
+  getPrizeById: (id: string) => Prize | undefined
+  getAvailablePrizes: () => Prize[]
+  getWinnersByPrize: (prizeId: string) => SelectedName[]
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -32,6 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     categories: [],
     names: [],
     selectedNames: [],
+    prizes: [],
   })
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -45,6 +59,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveState(state)
     }
   }, [state, isLoaded])
+
+  // Listen for storage changes from other tabs (for dual-screen sync)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'random-picker-state' && e.newValue) {
+        try {
+          const newState = JSON.parse(e.newValue)
+          setState(newState)
+        } catch (err) {
+          console.error('Failed to parse storage update:', err)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   const addCategory = (name: string, color: string) => {
     const newCategory: Category = {
@@ -95,7 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
-  const selectName = (id: string) => {
+  const selectName = (id: string, prize?: Prize) => {
     const nameToSelect = state.names.find((n) => n.id === id)
     if (!nameToSelect) return
 
@@ -104,12 +135,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: nameToSelect.name,
       categoryId: nameToSelect.categoryId,
       selectedAt: Date.now(),
+      prizeId: prize?.id,
+      prizeName: prize?.name,
     }
 
     setState((prev) => ({
       ...prev,
       names: prev.names.filter((n) => n.id !== id),
       selectedNames: [...prev.selectedNames, selected],
+      // Deduct prize quantity if a prize was selected
+      prizes: prize
+        ? prev.prizes.map((p) =>
+            p.id === prize.id ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p
+          )
+        : prev.prizes,
     }))
   }
 
@@ -127,6 +166,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       names: [...prev.names, restoredName],
       selectedNames: prev.selectedNames.filter((s) => s.id !== selectedId),
+      // Restore prize quantity if this winner had a prize
+      prizes: selectedName.prizeId
+        ? prev.prizes.map((p) =>
+            p.id === selectedName.prizeId ? { ...p, quantity: p.quantity + 1 } : p
+          )
+        : prev.prizes,
     }))
   }
 
@@ -217,6 +262,106 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return result
   }
 
+  const addPrize = (name: string, quantity: number) => {
+    const newPrize: Prize = {
+      id: generateId(),
+      name,
+      quantity,
+      initialQuantity: quantity,
+    }
+    setState((prev) => ({
+      ...prev,
+      prizes: [...prev.prizes, newPrize],
+    }))
+  }
+
+  const removePrize = (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      prizes: prev.prizes.filter((p) => p.id !== id),
+    }))
+  }
+
+  const updatePrize = (id: string, name: string, quantity: number) => {
+    setState((prev) => ({
+      ...prev,
+      prizes: prev.prizes.map((p) =>
+        p.id === id ? { ...p, name, quantity, initialQuantity: quantity } : p
+      ),
+    }))
+  }
+
+  const addPrizeStock = (id: string, amount: number) => {
+    setState((prev) => ({
+      ...prev,
+      prizes: prev.prizes.map((p) =>
+        p.id === id
+          ? { ...p, quantity: p.quantity + amount, initialQuantity: p.initialQuantity + amount }
+          : p
+      ),
+    }))
+  }
+
+  const getPrizeById = (id: string) => {
+    return state.prizes.find((p) => p.id === id)
+  }
+
+  const getAvailablePrizes = () => {
+    return state.prizes.filter((p) => p.quantity > 0)
+  }
+
+  const getWinnersByPrize = (prizeId: string) => {
+    return state.selectedNames.filter((s) => s.prizeId === prizeId)
+  }
+
+  const importPrizesFromCSV = (csvContent: string): PrizeImportResult => {
+    const result: PrizeImportResult = {
+      prizesAdded: 0,
+      errors: [],
+    }
+
+    const lines = csvContent.split(/\r?\n/).filter((line) => line.trim())
+    const newPrizes: Prize[] = [...state.prizes]
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
+
+      // Parse CSV line (handle quoted values)
+      const parts = line.match(/("([^"]*)"|[^,]+)/g)?.map((p) => p.replace(/^"|"$/g, '').trim()) || []
+
+      const name = parts[0]
+      const quantityStr = parts[1]
+
+      if (!name) {
+        result.errors.push(`Line ${i + 1}: Missing prize name`)
+        continue
+      }
+
+      const quantity = parseInt(quantityStr, 10)
+      if (isNaN(quantity) || quantity < 1) {
+        result.errors.push(`Line ${i + 1}: Invalid quantity "${quantityStr}" for "${name}"`)
+        continue
+      }
+
+      // Add prize
+      newPrizes.push({
+        id: generateId(),
+        name,
+        quantity,
+        initialQuantity: quantity,
+      })
+      result.prizesAdded++
+    }
+
+    setState((prev) => ({
+      ...prev,
+      prizes: newPrizes,
+    }))
+
+    return result
+  }
+
   if (!isLoaded) {
     return null
   }
@@ -237,6 +382,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getCategoryById,
         getCategoryByName,
         importFromCSV,
+        importPrizesFromCSV,
+        addPrize,
+        removePrize,
+        updatePrize,
+        addPrizeStock,
+        getPrizeById,
+        getAvailablePrizes,
+        getWinnersByPrize,
       }}
     >
       {children}

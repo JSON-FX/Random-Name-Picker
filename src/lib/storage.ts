@@ -12,6 +12,7 @@ const DEFAULT_STATE: AppState = {
   categories: DEFAULT_CATEGORIES,
   names: [],
   selectedNames: [],
+  prizes: [],
 }
 
 export function loadState(): AppState {
@@ -27,6 +28,7 @@ export function loadState(): AppState {
         categories: parsed.categories || DEFAULT_CATEGORIES,
         names: parsed.names || [],
         selectedNames: parsed.selectedNames || [],
+        prizes: parsed.prizes || [],
       }
     }
   } catch (e) {
