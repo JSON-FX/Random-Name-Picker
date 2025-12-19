@@ -5,12 +5,7 @@ export interface HotkeyConfig {
 }
 
 export const HOTKEY_WINNERS: HotkeyConfig[] = [
-  { key: 'A', name: 'JAYSON R. ALANANO', category: 'REGULAR-CASUAL' },
-  { key: 'P', name: 'JAY LEO POL POMICPIC', category: 'JOB-ORDER' },
-  { key: 'N', name: 'IVAN JOHN C. NACION', category: 'REGULAR-CASUAL' },
-  { key: 'T', name: 'JOHN DAVE HERMOCILLA TAPAY', category: 'JOB-ORDER' },
-  { key: 'M', name: 'GIDEON A. MAGBANUA', category: 'REGULAR-CASUAL' }, 
-  { key: 'L', name: 'LITO ALONZO NACION', category: 'JOB-ORDER' }, 
+  { key: 'ESC', name: 'Toggle', category: 'CTA' },
 ]
 
 export function findHotkeyWinner(
