@@ -90,109 +90,6 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Prize Summary Table */}
-        {prizes.length > 0 && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200 shadow-sm mb-6">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-              <h2 className="text-lg font-semibold text-gray-800">Prize Summary</h2>
-              <div className="relative">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  value={prizeSummarySearch}
-                  onChange={(e) => setPrizeSummarySearch(e.target.value)}
-                  placeholder="Search prizes..."
-                  className="pl-10 pr-4 py-2 rounded-lg bg-white border border-purple-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 w-64"
-                />
-                {prizeSummarySearch && (
-                  <button
-                    onClick={() => setPrizeSummarySearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-purple-100">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-purple-800">Prize Name</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Awarded</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Remaining</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-purple-100">
-                  {filteredPrizes.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                        No prizes match &quot;{prizeSummarySearch}&quot;
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredPrizes.map((prize) => {
-                      const awarded = prize.initialQuantity - prize.quantity
-                      const isDepleted = prize.quantity === 0
-                      return (
-                        <tr key={prize.id} className={isDepleted ? 'bg-gray-50' : 'hover:bg-purple-50'}>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">🎁</span>
-                              <span className={`font-medium ${isDepleted ? 'text-gray-500' : 'text-gray-800'}`}>
-                                {prize.name}
-                              </span>
-                              {isDepleted && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                                  Depleted
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold">
-                              {awarded}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
-                              isDepleted ? 'bg-gray-200 text-gray-500' : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {prize.quantity}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-600">
-                            {prize.initialQuantity}
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {prizeSummarySearch && filteredPrizes.length > 0 && (
-              <p className="mt-2 text-sm text-purple-600">
-                Showing {filteredPrizes.length} of {prizes.length} prizes
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Filter and Export */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -372,6 +269,109 @@ export default function ResultsPage() {
             </>
           )}
         </div>
+
+        {/* Prize Summary Table */}
+        {prizes.length > 0 && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200 shadow-sm mb-6">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+              <h2 className="text-lg font-semibold text-gray-800">Prize Summary</h2>
+              <div className="relative">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={prizeSummarySearch}
+                  onChange={(e) => setPrizeSummarySearch(e.target.value)}
+                  placeholder="Search prizes..."
+                  className="pl-10 pr-4 py-2 rounded-lg bg-white border border-purple-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 w-64"
+                />
+                {prizeSummarySearch && (
+                  <button
+                    onClick={() => setPrizeSummarySearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-purple-100">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-purple-800">Prize Name</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Awarded</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Remaining</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-800">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-purple-100">
+                  {filteredPrizes.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                        No prizes match &quot;{prizeSummarySearch}&quot;
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPrizes.map((prize) => {
+                      const awarded = prize.initialQuantity - prize.quantity
+                      const isDepleted = prize.quantity === 0
+                      return (
+                        <tr key={prize.id} className={isDepleted ? 'bg-gray-50' : 'hover:bg-purple-50'}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🎁</span>
+                              <span className={`font-medium ${isDepleted ? 'text-gray-500' : 'text-gray-800'}`}>
+                                {prize.name}
+                              </span>
+                              {isDepleted && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                                  Depleted
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold">
+                              {awarded}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
+                              isDepleted ? 'bg-gray-200 text-gray-500' : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {prize.quantity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {prize.initialQuantity}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {prizeSummarySearch && filteredPrizes.length > 0 && (
+              <p className="mt-2 text-sm text-purple-600">
+                Showing {filteredPrizes.length} of {prizes.length} prizes
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </main>
   )
